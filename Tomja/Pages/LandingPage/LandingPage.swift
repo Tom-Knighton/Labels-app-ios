@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LandingPage: View {
     
+    @State private var showJoinPage: Bool = false
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
@@ -34,7 +35,7 @@ struct LandingPage: View {
                 }
                 .buttonPlatformProminent()
                 
-                Button(action: {}) {
+                Button(action: { self.showJoinPage.toggle() }) {
                     Text("Join a Home")
                         .font(.title3.bold())
                         .padding(6)
@@ -45,6 +46,10 @@ struct LandingPage: View {
             }
             .scenePadding()
             .fontDesign(.rounded)
+        }
+        .sheet(isPresented: $showJoinPage) {
+            JoinHomePage()
+                .interactiveDismissDisabled()
         }
     }
 }
