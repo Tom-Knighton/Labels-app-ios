@@ -10,6 +10,7 @@
 		E21F499C2EF8638A00E32B85 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = E21F499B2EF8638A00E32B85 /* AppIcon.icon */; };
 		E21F4A3E2EF8A11300E32B85 /* API in Frameworks */ = {isa = PBXBuildFile; productRef = E21F4A3D2EF8A11300E32B85 /* API */; };
 		E21F4A4B2EF98A2D00E32B85 /* AppRouter in Frameworks */ = {isa = PBXBuildFile; productRef = E21F4A4A2EF98A2D00E32B85 /* AppRouter */; };
+		E21F4A632EF9A32B00E32B85 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = E21F4A622EF9A32B00E32B85 /* CodeScanner */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +51,7 @@
 			files = (
 				E21F4A3E2EF8A11300E32B85 /* API in Frameworks */,
 				E21F4A4B2EF98A2D00E32B85 /* AppRouter in Frameworks */,
+				E21F4A632EF9A32B00E32B85 /* CodeScanner in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -105,6 +107,7 @@
 			packageProductDependencies = (
 				E21F4A3D2EF8A11300E32B85 /* API */,
 				E21F4A4A2EF98A2D00E32B85 /* AppRouter */,
+				E21F4A622EF9A32B00E32B85 /* CodeScanner */,
 			);
 			productName = Tomja;
 			productReference = E2BC10D22EF85E6400C86006 /* Tomja.app */;
@@ -136,6 +139,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				E21F4A492EF98A2D00E32B85 /* XCRemoteSwiftPackageReference "AppRouter" */,
+				E21F4A612EF9A32B00E32B85 /* XCRemoteSwiftPackageReference "CodeScanner" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E2BC10D32EF85E6400C86006 /* Products */;
@@ -300,6 +304,7 @@
 				DEVELOPMENT_TEAM = 8H3J46CN24;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow access to the camera to allow scanning & registering of devices";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -333,6 +338,7 @@
 				DEVELOPMENT_TEAM = 8H3J46CN24;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow access to the camera to allow scanning & registering of devices";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -388,6 +394,14 @@
 				minimumVersion = 1.0.4;
 			};
 		};
+		E21F4A612EF9A32B00E32B85 /* XCRemoteSwiftPackageReference "CodeScanner" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/twostraws/CodeScanner/";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -399,6 +413,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E21F4A492EF98A2D00E32B85 /* XCRemoteSwiftPackageReference "AppRouter" */;
 			productName = AppRouter;
+		};
+		E21F4A622EF9A32B00E32B85 /* CodeScanner */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E21F4A612EF9A32B00E32B85 /* XCRemoteSwiftPackageReference "CodeScanner" */;
+			productName = CodeScanner;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

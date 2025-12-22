@@ -10,6 +10,7 @@ import SwiftUI
 
 public enum AppTab: String, CaseIterable, TabType {
     case home
+    case profile
     
     public var id: String { rawValue }
     
@@ -17,6 +18,8 @@ public enum AppTab: String, CaseIterable, TabType {
         switch self {
         case .home:
             return "house"
+        case .profile:
+            return "tag"
         }
     }
     
@@ -24,6 +27,8 @@ public enum AppTab: String, CaseIterable, TabType {
         switch self {
         case .home:
             return "Home"
+        case .profile:
+            return "My Labels"
         }
     }
 }

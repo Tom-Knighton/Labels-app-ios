@@ -22,12 +22,17 @@ public struct RootView: View {
             Tab(value: AppTab.home) {
                 NavigationStack(path: $router[.home]) {
                     HomePage()
-//                        .environment(\.home, home)
-//                        .environment(\.user, user)
                 }
-                
             } label: {
                 Label(AppTab.home.title, systemImage: AppTab.home.icon)
+            }
+            
+            Tab(value: AppTab.profile) {
+                NavigationStack(path: $router[.profile]) {
+                    ProfilePage()
+                }
+            } label: {
+                Label(AppTab.profile.title, systemImage: AppTab.profile.icon)
             }
         }
         .environment(router)
