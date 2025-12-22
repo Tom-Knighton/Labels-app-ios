@@ -12,4 +12,5 @@ public struct UserDTO: Codable, Sendable, Identifiable, Equatable, Hashable {
     public let homeId: String
     public let isActive: Bool
     public let apiKey: String?
+    public let devices: [DeviceDTO]
 }

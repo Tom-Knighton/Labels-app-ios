@@ -7,20 +7,29 @@
 
 import SwiftUI
 import SwiftData
+import AppRouter
 
 public struct RootView: View {
     
-    @Environment(\.modelContext) private var context
-    @Environment(\.user) private var user
     @Environment(\.home) private var home
+    @Environment(\.user) private var user
+    @State private var router = AppRouter(initialTab: .home)
+    @State var selection: AppTab = AppTab.home
+
         
     public var body: some View {
-        Text("Hello World \(user.name) - \(home.name)")
-        Button(action: { Task {
-            try? context.delete(model: LocalUser.self)
-            try? context.delete(model: LocalHome.self)
-            try? context.save()
-        }} ) { Text("Logout") }
-            .buttonPlatformBordered()
+        TabView(selection: $selection) {
+            Tab(value: AppTab.home) {
+                NavigationStack(path: $router[.home]) {
+                    HomePage()
+//                        .environment(\.home, home)
+//                        .environment(\.user, user)
+                }
+                
+            } label: {
+                Label(AppTab.home.title, systemImage: AppTab.home.icon)
+            }
+        }
+        .environment(router)
     }
 }

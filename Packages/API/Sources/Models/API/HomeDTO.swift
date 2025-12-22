@@ -11,4 +11,6 @@ public struct HomeDTO: Codable, Sendable, Identifiable, Equatable, Hashable {
     public let name: String
     public let isPrivate: Bool
     public let joinCode: String?
+    
+    public let users: [UserDTO]
 }

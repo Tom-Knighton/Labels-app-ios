@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		E21F499C2EF8638A00E32B85 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = E21F499B2EF8638A00E32B85 /* AppIcon.icon */; };
 		E21F4A3E2EF8A11300E32B85 /* API in Frameworks */ = {isa = PBXBuildFile; productRef = E21F4A3D2EF8A11300E32B85 /* API */; };
+		E21F4A4B2EF98A2D00E32B85 /* AppRouter in Frameworks */ = {isa = PBXBuildFile; productRef = E21F4A4A2EF98A2D00E32B85 /* AppRouter */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +49,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E21F4A3E2EF8A11300E32B85 /* API in Frameworks */,
+				E21F4A4B2EF98A2D00E32B85 /* AppRouter in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -102,6 +104,7 @@
 			name = Tomja;
 			packageProductDependencies = (
 				E21F4A3D2EF8A11300E32B85 /* API */,
+				E21F4A4A2EF98A2D00E32B85 /* AppRouter */,
 			);
 			productName = Tomja;
 			productReference = E2BC10D22EF85E6400C86006 /* Tomja.app */;
@@ -131,6 +134,9 @@
 			);
 			mainGroup = E2BC10C92EF85E6400C86006;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E21F4A492EF98A2D00E32B85 /* XCRemoteSwiftPackageReference "AppRouter" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E2BC10D32EF85E6400C86006 /* Products */;
 			projectDirPath = "";
@@ -373,10 +379,26 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		E21F4A492EF98A2D00E32B85 /* XCRemoteSwiftPackageReference "AppRouter" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/dimillian/AppRouter.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		E21F4A3D2EF8A11300E32B85 /* API */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = API;
+		};
+		E21F4A4A2EF98A2D00E32B85 /* AppRouter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E21F4A492EF98A2D00E32B85 /* XCRemoteSwiftPackageReference "AppRouter" */;
+			productName = AppRouter;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

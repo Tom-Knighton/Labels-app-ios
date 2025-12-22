@@ -122,7 +122,7 @@ extension SelectUserPage {
         
         do {
             let user: UserDTO? = try await api.post(Users.authAs(userId: userId, code: home.joinCode))
-            if let user, let key = user.key {
+            if let user, let key = user.apiKey {
                 try context.delete(model: LocalUser.self)
                 context.insert(LocalUser(id: user.id, name: user.name, homeId: user.homeId))
                 try context.save()

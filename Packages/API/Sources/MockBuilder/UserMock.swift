@@ -17,6 +17,7 @@ public class UserDTOMockBuilder {
     var homeId: String = "111111111111111"
     var isActive: Bool = true
     var apiKey: String? = nil
+    var devices: [DeviceDTO] = []
     
     public func withId(_ id: String) -> UserDTOMockBuilder {
         self.id = id
@@ -42,8 +43,13 @@ public class UserDTOMockBuilder {
         self.apiKey = key
         return self
     }
+    
+    public func withDevices(_ devices: [DeviceDTO]) -> UserDTOMockBuilder {
+        self.devices = devices
+        return self
+    }
    
     public func build() -> UserDTO {
-        UserDTO(id: id, name: name, homeId: homeId, isActive: isActive, apiKey: apiKey)
+        UserDTO(id: id, name: name, homeId: homeId, isActive: isActive, apiKey: apiKey, devices: devices)
     }
 }

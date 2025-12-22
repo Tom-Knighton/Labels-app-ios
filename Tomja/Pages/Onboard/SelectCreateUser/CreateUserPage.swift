@@ -54,7 +54,7 @@ extension CreateUserPage {
         do {
             let newUser: UserDTO = try await api.post(Users.create(userName: newName, homeId: home.id))
             let localUser = LocalUser(id: newUser.id, name: newUser.name, homeId: home.id)
-            if let key = newUser.key {
+            if let key = newUser.apiKey {
                 context.insert(localUser)
                 try? context.save()
                 _ = KeychainStore.setAPIKey(key)

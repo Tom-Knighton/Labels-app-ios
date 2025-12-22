@@ -16,6 +16,7 @@ public class HomeDTOMockBuilder {
     var name: String = "Mock Home"
     var isPrivate: Bool = true
     var joinCode: String? = "XXXXXX"
+    var users: [UserDTO] = []
     
     public func withId(_ id: String) -> HomeDTOMockBuilder {
         self.id = id
@@ -36,8 +37,13 @@ public class HomeDTOMockBuilder {
         self.joinCode = code
         return self
     }
+    
+    public func withUsers(_ users: [UserDTO]) -> HomeDTOMockBuilder {
+        self.users = users
+        return self
+    }
    
     public func build() -> HomeDTO {
-        HomeDTO(id: id, name: name, isPrivate: isPrivate, joinCode: joinCode)
+        HomeDTO(id: id, name: name, isPrivate: isPrivate, joinCode: joinCode, users: users)
     }
 }
