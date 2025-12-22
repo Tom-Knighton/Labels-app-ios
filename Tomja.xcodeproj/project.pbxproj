@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		E21F499C2EF8638A00E32B85 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = E21F499B2EF8638A00E32B85 /* AppIcon.icon */; };
+		E21F4A3E2EF8A11300E32B85 /* API in Frameworks */ = {isa = PBXBuildFile; productRef = E21F4A3D2EF8A11300E32B85 /* API */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -15,7 +16,25 @@
 		E2BC10D22EF85E6400C86006 /* Tomja.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tomja.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E21F4A3B2EF8A0D100E32B85 /* Exceptions for "Packages" folder in "Tomja" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				API,
+			);
+			target = E2BC10D12EF85E6400C86006 /* Tomja */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		E21F4A392EF8A0CB00E32B85 /* Packages */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E21F4A3B2EF8A0D100E32B85 /* Exceptions for "Packages" folder in "Tomja" target */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
 		E2BC10D42EF85E6400C86006 /* Tomja */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Tomja;
@@ -28,17 +47,27 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E21F4A3E2EF8A11300E32B85 /* API in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E21F4A3C2EF8A11300E32B85 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		E2BC10C92EF85E6400C86006 = {
 			isa = PBXGroup;
 			children = (
 				E21F499B2EF8638A00E32B85 /* AppIcon.icon */,
 				E2BC10D42EF85E6400C86006 /* Tomja */,
+				E21F4A392EF8A0CB00E32B85 /* Packages */,
+				E21F4A3C2EF8A11300E32B85 /* Frameworks */,
 				E2BC10D32EF85E6400C86006 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -67,10 +96,12 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				E21F4A392EF8A0CB00E32B85 /* Packages */,
 				E2BC10D42EF85E6400C86006 /* Tomja */,
 			);
 			name = Tomja;
 			packageProductDependencies = (
+				E21F4A3D2EF8A11300E32B85 /* API */,
 			);
 			productName = Tomja;
 			productReference = E2BC10D22EF85E6400C86006 /* Tomja.app */;
@@ -281,7 +312,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -314,7 +345,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -341,6 +372,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E21F4A3D2EF8A11300E32B85 /* API */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = API;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E2BC10CA2EF85E6400C86006 /* Project object */;
 }

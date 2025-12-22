@@ -6,11 +6,15 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct LandingPage: View {
     
+    @Environment(\.modelContext) private var context
     @State private var showJoinPage: Bool = false
     @Environment(\.colorScheme) private var colorScheme
+    
+   
     
     var body: some View {
         ZStack {
