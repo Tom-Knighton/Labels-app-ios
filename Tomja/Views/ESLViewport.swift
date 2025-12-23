@@ -16,7 +16,7 @@ struct ESLViewport<Content: View>: View {
     var body: some View {
         content()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .aspectRatio(aspect, contentMode: .fit)
+            .aspectRatio(aspect, contentMode: .fill)
             .clipped()
             .clipShape(RoundedRectangle(cornerRadius: 8))
     }

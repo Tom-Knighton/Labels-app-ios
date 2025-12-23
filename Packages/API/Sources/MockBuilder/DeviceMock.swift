@@ -19,7 +19,6 @@ public class DeviceDTOMockBuilder {
     var name: String = "Tom's Label"
     var address: String = "FF:FF:16:64:0B:B6"
     var currentAsset: String? = nil
-    var isFlashing: Bool = false
     var lastSuccessful: Date? = nil
     var lastSeen: Date? = nil
     var lastError: Date? = nil
@@ -27,6 +26,10 @@ public class DeviceDTOMockBuilder {
     var updatedAt: Date = .now
     var width: Int = 400
     var height: Int = 300
+    var previewBase64: String? = nil
+    var lastErrors: [String]? = nil
+    var lastFlashed: Date? = nil
+    var flashedFor: Int? = nil
     
     public func withId(_ id: String) -> DeviceDTOMockBuilder {
         self.id = id
@@ -55,11 +58,6 @@ public class DeviceDTOMockBuilder {
     
     public func withAsset(_ assetId: String) -> DeviceDTOMockBuilder {
         self.currentAsset = assetId
-        return self
-    }
-    
-    public func withFlashing(_ isFlashing: Bool) -> DeviceDTOMockBuilder {
-        self.isFlashing = isFlashing
         return self
     }
     
@@ -93,8 +91,24 @@ public class DeviceDTOMockBuilder {
         self.width = width
         return self
     }
+    
+    public func withErrors(_ errors: [String]?) -> DeviceDTOMockBuilder {
+        self.lastErrors = errors
+        return self
+    }
+    
+    public func withPreview(_ base64: String?) -> DeviceDTOMockBuilder {
+        self.previewBase64 = base64
+        return self
+    }
+    
+    public func withFlash(_ lastFlashed: Date?, for seconds: Int) -> DeviceDTOMockBuilder {
+        self.lastFlashed = lastFlashed
+        self.flashedFor = seconds
+        return self
+    }
    
     public func build() -> DeviceDTO {
-        DeviceDTO(id: id, homeId: homeId, ownerUserId: ownerId, name: name, ble: .init(address: address, width: width, height: height), shadow: .init(currentImageAssetId: currentAsset, isFlashing: isFlashing, lastSuccessfulActionAt: lastSuccessful, lastSeenAt: lastSeen, lastError: lastError), createdAt: createdAt, updatedAt: updatedAt)
+        DeviceDTO(id: id, homeId: homeId, ownerUserId: ownerId, name: name, ble: .init(address: address, width: width, height: height), shadow: .init(currentImagePreviewBase64: previewBase64, lastSuccessfulActionAt: lastSuccessful, lastSeenAt: lastSeen, lastError: lastError, currentImagePreviewHeight: height / 2, currentImagePreviewType: "image/jpeg", currentImagePreviewWidth: width / 2, lastErrors: lastErrors, flashedFor: flashedFor, lastFlashed: lastFlashed), createdAt: createdAt, updatedAt: updatedAt)
     }
 }

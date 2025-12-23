@@ -30,7 +30,7 @@ public struct HomePage: View {
                 ProgressView()
             }
         }
-        .task {
+        .task(id: "get-home") {
             do {
                 self.currentHome = try await api.get(Homes.my)
             } catch {

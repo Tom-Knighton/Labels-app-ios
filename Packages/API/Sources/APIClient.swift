@@ -6,6 +6,7 @@
 //
 
 import Foundation
+ 
 
 public protocol NetworkClient: Sendable {
     func get<Entity: Decodable>(_ endpoint: Endpoint) async throws -> Entity
@@ -25,29 +26,11 @@ public final class APIClient: NetworkClient, Sendable {
     
     private let host: String
     private let urlSession: URLSession
-    private let decoder: JSONDecoder
     
     public init(host: String) {
         self.host = host
         
         self.urlSession = URLSession.shared
-        self.decoder = JSONDecoder()
-        
-        decoder.dateDecodingStrategy = .custom({ decoder in
-            let container = try decoder.singleValueContainer()
-            let dateStr = try container.decode(String.self)
-            
-            let formatter = DateFormatter()
-            formatter.timeZone = TimeZone(abbreviation: "UTC")
-            let dateFormats = ["yyyy-MM-dd'T'HH:mm:ss'Z'", "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"]
-            for format in dateFormats {
-                formatter.dateFormat = format
-                if let date = formatter.date(from: dateStr) {
-                    return date
-                }
-            }
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateStr)")
-        })
     }
     
     public func get<Entity>(_ endpoint: any Endpoint) async throws -> Entity where Entity : Decodable {
@@ -77,13 +60,11 @@ public final class APIClient: NetworkClient, Sendable {
     public func delete(_ endpoint: Endpoint) async throws -> Bool {
         do {
             let url = try makeURL(endpoint: endpoint)
-            let request = makeURLRequest(url: url, endpoint: endpoint, httpMethod: "DELETE")
+            let request = makeURLRequest(url: url, endpoint: endpoint, httpMethod: "GET")
             let (data, httpResponse) = try await urlSession.data(for: request)
-            print("\(url)")
-
+            
             return (httpResponse as? HTTPURLResponse)?.statusCode == 200
         } catch {
-            print(error)
             return false
         }
     }
@@ -94,12 +75,14 @@ public final class APIClient: NetworkClient, Sendable {
         let (data, httpResponse) = try await urlSession.data(for: request)
         
         print("\(method) \(url)")
-                
+        
+        print(String(data: data, encoding: .utf8))
+        
         if Entity.self is String.Type || Entity.self is Optional<String>.Type {
             return String(data: data, encoding: .utf8) as! Entity
         }
         
-        return try decoder.decode(Entity.self, from: data)
+        return try configuredDecoder().decode(Entity.self, from: data)
     }
     
     private func makeURL(endpoint: Endpoint) throws -> URL
@@ -136,5 +119,24 @@ public final class APIClient: NetworkClient, Sendable {
         }
         
         return request
+    }
+    
+    private func configuredDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateStr = try container.decode(String.self)
+            
+            let formatter = DateFormatter()
+            formatter.timeZone = TimeZone(abbreviation: "UTC")
+            for format in ["yyyy-MM-dd'T'HH:mm:ss'Z'", "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"] {
+                formatter.dateFormat = format
+                if let date = formatter.date(from: dateStr) {
+                    return date
+                }
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateStr)")
+        }
+        return decoder
     }
 }

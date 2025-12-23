@@ -30,11 +30,14 @@ public struct UserHomeRowView: View {
                             .stroke(Color.accentColor, style: .init(lineWidth: 1))
                         
                         ESLViewport(sizePx: .init(width: device.ble.width, height: device.ble.height)) {
-                            RoundedRectangle(cornerRadius: 5)
+                            
+                            if let preview = device.shadow.currentImagePreviewBase64 {
+                                Image(base64JPEG: preview)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            }
                         }
                         .shadow(radius: 3)
-                        
-                        
                     }
                     
                     HStack {
@@ -60,7 +63,7 @@ public struct UserHomeRowView: View {
             }
             .padding()
         }
-        .frame(minHeight: 100)
+        .frame(minHeight: 50)
         .clipShape(.rect(cornerRadius: 10))
         .transform { view in
             if #available(iOS 26.0, *) {

@@ -5,12 +5,15 @@
 //  Created by Tom Knighton on 21/12/2025.
 //
 
-public struct HomeDTO: Codable, Sendable, Identifiable, Equatable, Hashable {
+import Codable
+
+@Codable
+public struct HomeDTO: Sendable, Identifiable, Equatable, Hashable {
     
     public let id: String
     public let name: String
     public let isPrivate: Bool
     public let joinCode: String?
     
-    public let users: [UserDTO]
+    public var users: [UserDTO] = []
 }

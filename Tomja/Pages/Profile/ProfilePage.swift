@@ -16,6 +16,8 @@ public struct ProfilePage: View {
     @State private var isLoading: Bool = false
     @State private var devices: [DeviceDTO] = []
     @State private var showAdd: Bool = false
+    
+    @State private var messageError: Bool = false
         
     public var body: some View {
         ZStack {
@@ -52,11 +54,35 @@ public struct ProfilePage: View {
                             .stroke(Color.accentColor, style: .init(lineWidth: 1))
                         
                         ESLViewport(sizePx: .init(width: device.ble.width, height: device.ble.height)) {
-                            RoundedRectangle(cornerRadius: 5)
+                            if let preview = device.shadow.currentImagePreviewBase64 {
+                                Image(base64JPEG: preview)
+                                    .resizable()
+                                    .aspectRatio(CGFloat(device.ble.width) / CGFloat(device.ble.height), contentMode: .fill)
+                                   
+                            } else {
+                                RoundedRectangle(cornerRadius: 5)
+                            }
                         }
                         .shadow(radius: 3)
                     }
                     .padding(6)
+                    
+                    HStack {
+                        Button(action: { Task { await clearScreen(for: device) }}) {
+                            Text("Clear Screen")
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        Button(action: {}) {
+                            Text("Flash")
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        Button(action: {}) {
+                            Text("Set Image")
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
                 .padding()
                 .background(Color.color2)
@@ -116,6 +142,18 @@ extension ProfilePage {
             }
         } catch {
             print(error)
+        }
+    }
+    
+    func clearScreen(for device: DeviceDTO) async {
+        do {
+            let status: MessageResponse = try await api.post(Messages.clear(deviceId: device.id))
+            if !status.accepted {
+                self.messageError = true
+            }
+        } catch {
+            print(error)
+            self.messageError = true
         }
     }
 }

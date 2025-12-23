@@ -43,17 +43,27 @@ public struct DeviceBLE: Codable, Equatable, Sendable, Hashable {
 }
 
 public struct DeviceShadow: Codable, Equatable, Sendable, Hashable {
-    public let currentImageAssetId: String?
-    public let isFlashing: Bool
+    public let currentImagePreviewBase64: String?
     public let lastSuccessfulActionAt: Date?
     public let lastSeenAt: Date?
     public let lastError: Date?
+    public let currentImagePreviewHeight: Int?
+    public let currentImagePreviewType: String?
+    public let currentImagePreviewWidth: Int?
+    public let lastErrors: [String]?
+    public let flashedFor: Int?
+    public let lastFlashed: Date?
     
-    public init(currentImageAssetId: String?, isFlashing: Bool, lastSuccessfulActionAt: Date?, lastSeenAt: Date?, lastError: Date?) {
-        self.currentImageAssetId = currentImageAssetId
-        self.isFlashing = isFlashing
+    public init(currentImagePreviewBase64: String?, lastSuccessfulActionAt: Date?, lastSeenAt: Date?, lastError: Date?, currentImagePreviewHeight: Int?, currentImagePreviewType: String?, currentImagePreviewWidth: Int?, lastErrors: [String]?, flashedFor: Int?, lastFlashed: Date?) {
+        self.currentImagePreviewBase64 = currentImagePreviewBase64
         self.lastSuccessfulActionAt = lastSuccessfulActionAt
         self.lastSeenAt = lastSeenAt
         self.lastError = lastError
+        self.currentImagePreviewHeight = currentImagePreviewHeight
+        self.currentImagePreviewType = currentImagePreviewType
+        self.currentImagePreviewWidth = currentImagePreviewWidth
+        self.lastErrors = lastErrors
+        self.flashedFor = flashedFor
+        self.lastFlashed = lastFlashed
     }
 }
