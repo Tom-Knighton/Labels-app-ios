@@ -141,9 +141,9 @@ extension RegisterDeviceSheet {
     fileprivate func sizing(for type: DeviceType) -> (width: Int, height: Int) {
         switch type {
         case .small:
-            return (400, 100)
+            return (296, 128)
         case .medium:
-            return (400, 100)
+            return (296, 128)
         case .large:
             return (400, 300)
         }

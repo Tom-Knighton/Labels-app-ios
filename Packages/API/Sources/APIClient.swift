@@ -60,7 +60,7 @@ public final class APIClient: NetworkClient, Sendable {
     public func delete(_ endpoint: Endpoint) async throws -> Bool {
         do {
             let url = try makeURL(endpoint: endpoint)
-            let request = makeURLRequest(url: url, endpoint: endpoint, httpMethod: "GET")
+            let request = makeURLRequest(url: url, endpoint: endpoint, httpMethod: "DELETE")
             let (data, httpResponse) = try await urlSession.data(for: request)
             
             return (httpResponse as? HTTPURLResponse)?.statusCode == 200

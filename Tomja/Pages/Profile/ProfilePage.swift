@@ -184,8 +184,11 @@ extension ProfilePage {
     
     func deleteDevice(device: DeviceDTO) async {
         do {
+            print("deleting...")
             if try await api.delete(Devices.delete(id: device.id)) {
                 self.devices.removeAll(where: { $0.id == device.id })
+            } else {
+                print("fail")
             }
         } catch {
             print(error)
