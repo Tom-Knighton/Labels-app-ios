@@ -12,10 +12,15 @@ public protocol Endpoint: Sendable {
     func queryItems() -> [URLQueryItem]?
     func mockResponseOk() -> any Decodable
     var body: Encodable? { get }
+    var multipartData: (data: Data, boundary: String)? { get }
 }
 
 public extension Endpoint {
     var body: Encodable? {
+        nil
+    }
+    
+    var multipartData: (data: Data, boundary: String)? {
         nil
     }
 }

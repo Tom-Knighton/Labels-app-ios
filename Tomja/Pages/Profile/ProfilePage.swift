@@ -21,6 +21,7 @@ public struct ProfilePage: View {
     @State private var message: String? = nil
     @State private var sending: Bool = false
     @State private var showFlashSheetForDevice: String? = nil
+    @State private var showCanvasForDevice: String? = nil
         
     private var alertIsPresented: Binding<Bool> {
         Binding(
@@ -76,7 +77,7 @@ public struct ProfilePage: View {
                         }
                         .buttonStyle(.bordered)
                         
-                        Button(action: {}) {
+                        Button(action: { self.showCanvasForDevice = device.id }) {
                             Text("Set Image")
                         }
                         .buttonStyle(.bordered)
@@ -134,6 +135,16 @@ public struct ProfilePage: View {
                         await flashDevice(for: deviceId, colour: selected)
                     }
                 }
+            }
+        })
+        .fullScreenCover(item: $showCanvasForDevice, content: { deviceId in
+            NavigationStack {
+                PencilKitCanvasEditor(pixelSize: CGSize(width: 400, height: 300), stickerAssets: ["sticker_star"]) { image in
+                    Task {
+                        await sendImage(for: deviceId, image: image)
+                    }
+                }
+                    .navigationTitle("Editor")
             }
         })
         .alert("Info", isPresented: alertIsPresented) {
@@ -205,6 +216,24 @@ extension ProfilePage {
         
         do {
             let status: MessageResponse = try await api.post(Messages.flash(deviceId: deviceId, hex: colour.hexString() ?? "#FFFFFF"))
+            if !status.accepted {
+                self.message = "Something went wrong sending the flash command - please try again later."
+                return
+            }
+            
+            self.message = "The clear command has been sent - it may take up to a minute to flash."
+        } catch {
+            print(error)
+            self.message = "Something went wrong sending the flash command - please try again later."
+        }
+    }
+    
+    func sendImage(for deviceId: String, image: UIImage) async {
+        self.sending = true
+        defer { self.sending = false }
+        
+        do {
+            let status: MessageResponse = try await api.post(Messages.sendImage(deviceId: deviceId, imageData: image.pngData() ?? Data()))
             if !status.accepted {
                 self.message = "Something went wrong sending the flash command - please try again later."
                 return

@@ -13,6 +13,7 @@ public protocol NetworkClient: Sendable {
     func getExpect200(_ endpoint: Endpoint) async throws -> Bool
     func put<Entity: Decodable>(_ endpoint: Endpoint) async throws -> Entity
     func post<Entity: Decodable>(_ endpoint: Endpoint) async throws -> Entity
+    func postIgnoreResponse(_ endpoint: Endpoint) async throws -> Bool
     func delete(_ endpoint: Endpoint) async throws -> Bool
 }
 
@@ -53,6 +54,23 @@ public final class APIClient: NetworkClient, Sendable {
         return try await makeEntityRequest(endpoint: endpoint, method: "POST")
     }
     
+    public func postIgnoreResponse(_ endpoint: Endpoint) async throws -> Bool {
+        do {
+            let url = try makeURL(endpoint: endpoint)
+            let request = makeURLRequest(url: url, endpoint: endpoint, httpMethod: "POST")
+            let (data, httpResponse) = try await urlSession.data(for: request)
+            
+            let statusCode = (httpResponse as? HTTPURLResponse)?.statusCode ?? 0
+            print("POST \(url) - Status: \(statusCode)")
+            
+            // Return true if request was sent (ignore status code)
+            return true
+        } catch {
+            print("POST error: \(error)")
+            return false
+        }
+    }
+    
     public func put<Entity: Decodable>(_ endpoint: Endpoint) async throws -> Entity {
         return try await makeEntityRequest(endpoint: endpoint, method: "PUT")
     }
@@ -76,7 +94,9 @@ public final class APIClient: NetworkClient, Sendable {
         
         print("\(method) \(url)")
         
-        print(String(data: data, encoding: .utf8))
+        let statusCode = (httpResponse as? HTTPURLResponse)?.statusCode ?? 0
+        print("Status: \(statusCode)")
+        print(String(data: data, encoding: .utf8) ?? "No response body")
         
         if Entity.self is String.Type || Entity.self is Optional<String>.Type {
             return String(data: data, encoding: .utf8) as! Entity
@@ -98,8 +118,12 @@ public final class APIClient: NetworkClient, Sendable {
     private func makeURLRequest(url: URL, endpoint: Endpoint, httpMethod: String) -> URLRequest {
         var request = URLRequest(url: url)
         request.httpMethod = httpMethod
-                
-        if let json = endpoint.body {
+        
+        // Check for multipart data first
+        if let multipart = endpoint.multipartData {
+            request.httpBody = multipart.data
+            request.setValue("multipart/form-data; boundary=\(multipart.boundary)", forHTTPHeaderField: "Content-Type")
+        } else if let json = endpoint.body {
             let encoder = JSONEncoder()
             do {
                 let formatter = DateFormatter()
