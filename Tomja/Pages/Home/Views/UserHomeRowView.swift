@@ -7,10 +7,28 @@
 
 import SwiftUI
 import API
+import CustomAlert
 
 public struct UserHomeRowView: View {
     
+    @Environment(\.networkClient) private var api
     public let user: UserDTO
+    
+    @State private var message: String? = nil
+    @State private var sending: Bool = false
+    @State private var showFlashSheetForDevice: String? = nil
+    @State private var showCanvasForDevice: String? = nil
+    
+    private var alertIsPresented: Binding<Bool> {
+        Binding(
+            get: { message != nil },
+            set: { isPresented in
+                if !isPresented {
+                    message = nil
+                }
+            }
+        )
+    }
     
     public var body: some View {
         ZStack {
@@ -41,13 +59,13 @@ public struct UserHomeRowView: View {
                     }
                     
                     HStack {
-                        Button(action: {}) {
+                        Button(action: { self.showCanvasForDevice = device.id }) {
                             Label("New Message", systemImage: "paperplane")
                                 .bold()
                         }
                         .buttonStyle(.borderedProminent)
                         
-                        Button(action: {}) {
+                        Button(action: { self.showFlashSheetForDevice = device.id }) {
                             Label("Flash", systemImage: "light.beacon.max.fill")
                                 .bold()
                         }
@@ -73,5 +91,71 @@ public struct UserHomeRowView: View {
             }
         }
         .shadow(radius: 3)
+        .sheet(item: $showFlashSheetForDevice, content: { deviceId in
+            ColorPickerSheet { selected in
+                if let selected {
+                    Task {
+                        await flashDevice(for: deviceId, colour: selected)
+                    }
+                }
+            }
+        })
+        .fullScreenCover(item: $showCanvasForDevice, content: { deviceId in
+            NavigationStack {
+                PencilKitCanvasEditor(pixelSize: CGSize(width: 400, height: 300), stickerAssets: ["sticker_star"]) { image in
+                    Task {
+                        await sendImage(for: deviceId, image: image)
+                    }
+                }
+                .navigationTitle("Editor")
+            }
+        })
+        .alert("Info", isPresented: alertIsPresented) {
+            Button(action: { self.message = nil }) { Text("Ok") }
+        } message: {
+            Text(self.message ?? "")
+        }
+        .customAlert("Sending...", isPresented: $sending) {
+            Text("Sending the request, this may take a few seconds...")
+            ProgressView()
+        } actions: {}
+    }
+}
+
+extension UserHomeRowView {
+    func flashDevice(for deviceId: String, colour: Color) async {
+        self.sending = true
+        defer { self.sending = false }
+        
+        do {
+            let status: MessageResponse = try await api.post(Messages.flash(deviceId: deviceId, hex: colour.hexString() ?? "#FFFFFF"))
+            if !status.accepted {
+                self.message = "Something went wrong sending the flash request - please try again later."
+                return
+            }
+            
+            self.message = "The flash request has been sent - it may take up to a minute to flash."
+        } catch {
+            print(error)
+            self.message = "Something went wrong sending the flash request - please try again later."
+        }
+    }
+    
+    func sendImage(for deviceId: String, image: UIImage) async {
+        self.sending = true
+        defer { self.sending = false }
+        
+        do {
+            let status: MessageResponse = try await api.post(Messages.sendImage(deviceId: deviceId, imageData: image.pngData() ?? Data()))
+            if !status.accepted {
+                self.message = "Something went wrong sending the image request - please try again later."
+                return
+            }
+            
+            self.message = "The image request has been sent - it may take up to a minute to send."
+        } catch {
+            print(error)
+            self.message = "Something went wrong sending the image request - please try again later."
+        }
     }
 }
