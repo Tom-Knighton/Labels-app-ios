@@ -70,6 +70,21 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         NotificationCenter.default.post(name: .deviceUpdated, object: nil)
+        let name = notification.request.content.title
+        
+        if name.hasSuffix("Failed") {
+            if name.hasPrefix("Flash") {
+                NotificationCenter.default.post(name: .deviceFailFlash, object: nil)
+            }
+            
+            if name.hasPrefix("Clear") {
+                NotificationCenter.default.post(name: .deviceFailClear, object: nil)
+            }
+            
+            if name.hasPrefix("Image") {
+                NotificationCenter.default.post(name: .deviceFailImage, object: nil)
+            }
+        }
         
         completionHandler([])
     }

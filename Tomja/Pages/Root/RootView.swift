@@ -18,7 +18,19 @@ public struct RootView: View {
     @Environment(PushRegistrationManager.self) private var pushManager
     @Environment(\.scenePhase) private var scenePhase
     @State private var router = AppRouter(initialTab: .home)
-    @State var selection: AppTab = AppTab.home    
+    @State var selection: AppTab = AppTab.home
+    
+    @State private var error: String? = nil
+    private var alertIsPresented: Binding<Bool> {
+        Binding(
+            get: { error != nil },
+            set: { isPresented in
+                if !isPresented {
+                    error = nil
+                }
+            }
+        )
+    }
         
     public var body: some View {
         TabView(selection: $selection) {
@@ -47,6 +59,20 @@ public struct RootView: View {
             if newPhase == .active {
                 pushManager.refreshAndRegisterIfNeeded(api: api)
             }
+        }
+        .alert("Uh oh!", isPresented: alertIsPresented, actions: {
+            Button(action: { self.error = nil }) { Text("Ok") }
+        }, message:  {
+            Text(error ?? "")
+        })
+        .onReceive(NotificationCenter.default.publisher(for: .deviceFailClear)) { _ in
+            self.error = "Your last request to clear a device failed - please try again. This is likely a temporary connection issue!"
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deviceFailFlash)) { _ in
+            self.error = "Your last request to flash a device failed - please try again. This is likely a temporary connection issue!"
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deviceFailImage)) { _ in
+            self.error = "Your last request to set a device's image failed - please try again. This is likely a temporary connection issue!"
         }
     }
 }
