@@ -153,7 +153,7 @@ public struct ProfilePage: View {
             Text(self.message ?? "")
         }
         .customAlert("Sending...", isPresented: $sending) {
-            Text("Sending the command, this may take a few seconds...")
+            Text("Sending the request, this may take a few seconds...")
             ProgressView()
         } actions: {}
     }
@@ -203,7 +203,7 @@ extension ProfilePage {
                 return
             }
             
-            self.message = "The clear command has been sent - it may take up to a minute to update."
+            self.message = "The request to clear the screen has been sent - it may take up to a minute to update."
         } catch {
             print(error)
             self.message = "Something went wrong sending the clear command - please try again later."
@@ -217,14 +217,14 @@ extension ProfilePage {
         do {
             let status: MessageResponse = try await api.post(Messages.flash(deviceId: deviceId, hex: colour.hexString() ?? "#FFFFFF"))
             if !status.accepted {
-                self.message = "Something went wrong sending the flash command - please try again later."
+                self.message = "Something went wrong sending the flash request - please try again later."
                 return
             }
             
-            self.message = "The clear command has been sent - it may take up to a minute to flash."
+            self.message = "The flash request has been sent - it may take up to a minute to flash."
         } catch {
             print(error)
-            self.message = "Something went wrong sending the flash command - please try again later."
+            self.message = "Something went wrong sending the flash request - please try again later."
         }
     }
     
@@ -235,14 +235,14 @@ extension ProfilePage {
         do {
             let status: MessageResponse = try await api.post(Messages.sendImage(deviceId: deviceId, imageData: image.pngData() ?? Data()))
             if !status.accepted {
-                self.message = "Something went wrong sending the flash command - please try again later."
+                self.message = "Something went wrong sending the image request - please try again later."
                 return
             }
             
-            self.message = "The clear command has been sent - it may take up to a minute to flash."
+            self.message = "The image request has been sent - it may take up to a minute to send."
         } catch {
             print(error)
-            self.message = "Something went wrong sending the flash command - please try again later."
+            self.message = "Something went wrong sending the image request - please try again later."
         }
     }
     
