@@ -14,7 +14,7 @@ import UserNotifications
 struct TomjaApp: App {
     
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var api = APIClient(host: "https://api.dev.labels.tomk.online/")
+    @State private var api = APIClient(host: "https://api.labels.tomk.online/")
     @State private var pushManager = PushRegistrationManager()
     
     var body: some Scene {

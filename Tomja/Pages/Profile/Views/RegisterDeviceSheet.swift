@@ -92,7 +92,7 @@ public struct RegisterDeviceSheet: View {
             CodeScannerView(codeTypes: [.code128], scanMode: .once, showViewfinder: true, shouldVibrateOnSuccess: true) { result in
                 if case .success(let code) = result {
                     self.showScanner = false
-                    self.address = "FF:FF:\(insertColonsEveryTwoCharacters(code.string))"
+                    self.address = "66:66:\(insertColonsEveryTwoCharacters(code.string))"
                 }
             }
         }

@@ -20,8 +20,8 @@ public struct ProfilePage: View {
     @State private var loadTask: Task<Void, Never>?
     @State private var message: String? = nil
     @State private var sending: Bool = false
-    @State private var showFlashSheetForDevice: String? = nil
-    @State private var showCanvasForDevice: String? = nil
+    @State private var showFlashSheetForDevice: DeviceDTO? = nil
+    @State private var showCanvasForDevice: DeviceDTO? = nil
         
     private var alertIsPresented: Binding<Bool> {
         Binding(
@@ -72,12 +72,12 @@ public struct ProfilePage: View {
                         }
                         .buttonStyle(.bordered)
                         
-                        Button(action: { self.showFlashSheetForDevice = device.id }) {
+                        Button(action: { self.showFlashSheetForDevice = device }) {
                             Text("Flash")
                         }
                         .buttonStyle(.bordered)
                         
-                        Button(action: { self.showCanvasForDevice = device.id }) {
+                        Button(action: { self.showCanvasForDevice = device }) {
                             Text("Set Image")
                         }
                         .buttonStyle(.bordered)
@@ -128,20 +128,20 @@ public struct ProfilePage: View {
                     }
                 }
         }
-        .sheet(item: $showFlashSheetForDevice, content: { deviceId in
+        .sheet(item: $showFlashSheetForDevice, content: { device in
             ColorPickerSheet { selected in
                 if let selected {
                     Task {
-                        await flashDevice(for: deviceId, colour: selected)
+                        await flashDevice(for: device.id, colour: selected)
                     }
                 }
             }
         })
-        .fullScreenCover(item: $showCanvasForDevice, content: { deviceId in
+        .fullScreenCover(item: $showCanvasForDevice, content: { device in
             NavigationStack {
-                PencilKitCanvasEditor(pixelSize: CGSize(width: 400, height: 300), stickerAssets: ["sticker_star"]) { image in
+                PencilKitCanvasEditor(pixelSize: CGSize(width: device.ble?.width ?? 400, height: device.ble?.height ?? 300), stickerAssets: ["sticker_star"]) { image in
                     Task {
-                        await sendImage(for: deviceId, image: image)
+                        await sendImage(for: device.id, image: image)
                     }
                 }
                     .navigationTitle("Editor")

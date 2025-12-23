@@ -17,7 +17,7 @@ public class DeviceDTOMockBuilder {
     var homeId: String = "1"
     var ownerId: String = "2"
     var name: String = "Tom's Label"
-    var address: String = "FF:FF:16:64:0B:B6"
+    var address: String = "66:66:16:64:0B:B6"
     var currentAsset: String? = nil
     var lastSuccessful: Date? = nil
     var lastSeen: Date? = nil

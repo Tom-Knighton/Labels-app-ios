@@ -8,6 +8,8 @@
 import SwiftUI
 import PencilKit
 import PhotosUI
+import UIKit
+import Combine
 
 // MARK: - Models
 
@@ -68,7 +70,6 @@ private struct CanvasStickerItem: Identifiable, Equatable {
 // MARK: - View
 
 public struct PencilKitCanvasEditor: View {
-    
     @Environment(\.dismiss) private var dismiss
     
     public let pixelSize: CGSize
@@ -83,10 +84,24 @@ public struct PencilKitCanvasEditor: View {
     
     @State private var backgroundUIImage: UIImage?
     @State private var backgroundPickerItem: PhotosPickerItem?
+    @State private var backgroundCropCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
+    @State private var isMovingBackground = false
     
     @State private var showingStickerPicker = false
     @State private var editingTextID: UUID?
     @State private var editingTextDraft: String = ""
+    
+    // PencilKit layout / export plumbing
+    @State private var pkVisibleContentRect: CGRect = .zero
+    @State private var pkCanvasBoundsSize: CGSize = .zero
+    
+    // Preview
+    @State private var previewUIImage: UIImage?
+    @State private var showTools: Bool = true
+    private let previewTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
+    
+    @State private var bgDragBaseCenter: CGPoint?
+
     
     public init(pixelSize: CGSize, stickerAssets: [String], onComplete: @escaping (UIImage) -> Void) {
         self.pixelSize = pixelSize
@@ -102,33 +117,31 @@ public struct PencilKitCanvasEditor: View {
                 let canvasRect = canvasRect(in: geo.size, targetAspect: pixelSize.width / pixelSize.height)
                 
                 ZStack {
-                    if let bg = backgroundUIImage {
-                        Image(uiImage: bg.croppedToAspect(pixelSize.width / pixelSize.height))
-                            .resizable()
-                            .aspectRatio(pixelSize.width / pixelSize.height, contentMode: .fill)
-                            .frame(width: canvasRect.width, height: canvasRect.height)
-                            .clipped()
-                    } else {
-                        Rectangle()
-                            .fill(Color.white)
-                            .frame(width: canvasRect.width, height: canvasRect.height)
-                    }
+                    backgroundLayer(canvasSize: canvasRect.size)
                     
-                    PencilKitViewWithToolPicker(drawing: $drawing)
-                        .frame(width: canvasRect.width, height: canvasRect.height)
-                        .clipped()
+                    PencilKitViewWithToolPicker(
+                        drawing: $drawing,
+                        visibleContentRect: $pkVisibleContentRect,
+                        canvasBoundsSize: $pkCanvasBoundsSize,
+                        isInteractive: !isMovingBackground,
+                        toolPickerShows: $showTools
+                    )
+                    .frame(width: canvasRect.width, height: canvasRect.height)
+                    .clipped()
                     
                     ForEach(stickerItems) { item in
                         stickerView(item, in: canvasRect.size)
                             .zIndex(selection == .sticker(item.id) ? 20 : 10)
+                            .allowsHitTesting(!isMovingBackground)
                     }
                     
                     ForEach(textItems) { item in
                         textView(item, in: canvasRect.size)
                             .zIndex(selection == .text(item.id) ? 21 : 11)
+                            .allowsHitTesting(!isMovingBackground)
                     }
                     
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(Color.black.opacity(0.15), lineWidth: 1)
                         .frame(width: canvasRect.width, height: canvasRect.height)
                 }
@@ -141,20 +154,18 @@ public struct PencilKitCanvasEditor: View {
                 }
             }
             .padding(.horizontal)
+            
+            previewSection
         }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button(action: { self.dismiss() }) {
-                    Text("Cancel")
-                }
+                Button("Cancel") { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button(action: {
+                Button("Next") {
                     let image = exportUIImage()
                     onComplete(image)
                     dismiss()
-                }) {
-                    Text("Next")
                 }
             }
         }
@@ -170,9 +181,16 @@ public struct PencilKitCanvasEditor: View {
             Task {
                 if let data = try? await newValue.loadTransferable(type: Data.self),
                    let img = UIImage(data: data) {
-                    await MainActor.run { backgroundUIImage = img }
+                    await MainActor.run {
+                        backgroundUIImage = img
+                        backgroundCropCenter = CGPoint(x: 0.5, y: 0.5)
+                        isMovingBackground = false
+                    }
                 }
             }
+        }
+        .onReceive(previewTimer) { _ in
+            previewUIImage = exportUIImage()
         }
     }
     
@@ -192,49 +210,166 @@ public struct PencilKitCanvasEditor: View {
                 }
                 .buttonStyle(.bordered)
                 
-                Button("Clear BG") { backgroundUIImage = nil }
-                    .buttonStyle(.bordered)
+                Button(isMovingBackground ? "Done BG" : "Move BG") {
+                    isMovingBackground.toggle()
+                    if isMovingBackground {
+                        selection = nil
+                        editingTextID = nil
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(backgroundUIImage == nil)
+                
+                Button("Clear BG") {
+                    backgroundUIImage = nil
+                    backgroundCropCenter = CGPoint(x: 0.5, y: 0.5)
+                    isMovingBackground = false
+                }
+                .buttonStyle(.bordered)
                 
                 Button("Delete Selected") { deleteSelected() }
                     .buttonStyle(.bordered)
-                    .disabled(selection == nil)
+                    .disabled(selection == nil || isMovingBackground)
             }
             .padding(.horizontal)
         }
     }
     
-    // MARK: - Export
+    // MARK: - Background
     
-    private var exportRow: some View {
-        HStack {
-            Text("Canvas: \(Int(pixelSize.width))×\(Int(pixelSize.height)) px")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            
-            Spacer()
-            
-            Button("Export UIImage") {
-                let image = exportUIImage()
-                print("Exported: \(image.size)")
-            }
-            .buttonStyle(.borderedProminent)
+    @ViewBuilder
+    private func backgroundLayer(canvasSize: CGSize) -> some View {
+        if let bg = backgroundUIImage {
+            Image(uiImage: bg.croppedToAspect(pixelSize.width / pixelSize.height, center: backgroundCropCenter))
+                .resizable()
+                .aspectRatio(pixelSize.width / pixelSize.height, contentMode: .fill)
+                .frame(width: canvasSize.width, height: canvasSize.height)
+                .clipped()
+                .contentShape(Rectangle())
+                .if(isMovingBackground) { view in
+                    view.gesture(backgroundDragGesture(canvasSize: canvasSize))
+                }
+                .overlay(alignment: .topLeading) {
+                    if isMovingBackground {
+                        Text("Drag to position background")
+                            .font(.footnote)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.black.opacity(0.35))
+                            .clipShape(Capsule())
+                            .padding(10)
+                    }
+                }
+        } else {
+            Rectangle()
+                .fill(Color.white)
+                .frame(width: canvasSize.width, height: canvasSize.height)
         }
-        .padding(.horizontal)
-        .padding(.bottom, 8)
     }
     
+    private func backgroundDragGesture(canvasSize: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                guard let bg = backgroundUIImage else { return }
+                
+                let aspect = pixelSize.width / pixelSize.height
+                let limits = bg.cropCenterLimits(forAspect: aspect)
+                
+                if bgDragBaseCenter == nil {
+                    bgDragBaseCenter = backgroundCropCenter
+                }
+                guard let base = bgDragBaseCenter else { return }
+                
+                let dx = value.translation.width / max(canvasSize.width, 1)
+                let dy = value.translation.height / max(canvasSize.height, 1)
+                
+                var newCenter = base
+                newCenter.x = (newCenter.x - dx).clamped(to: limits.xRange)
+                newCenter.y = (newCenter.y - dy).clamped(to: limits.yRange)
+                
+                backgroundCropCenter = newCenter
+            }
+            .onEnded { _ in
+                bgDragBaseCenter = nil
+            }
+    }
+
+    
+    // MARK: - Preview
+    
+    private var previewSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Export preview (updates every 1s)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                
+                Spacer()
+                
+                if let img = previewUIImage, let cg = img.cgImage {
+                    Text("\(cg.width)×\(cg.height) px")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            
+            Group {
+                if let img = previewUIImage {
+                    Image(uiImage: img)
+                        .resizable()
+                        .interpolation(.none)
+                        .aspectRatio(pixelSize.width / pixelSize.height, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .background(.thinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                } else {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.thinMaterial)
+                        .frame(height: 140)
+                        .overlay(
+                            Text("No preview yet")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        )
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 12)
+    }
+    
+    // MARK: - Export (ImageRenderer)
+    
     private func exportUIImage() -> UIImage {
+        let aspect = pixelSize.width / pixelSize.height
+        
+        let rect: CGRect = {
+            if !pkVisibleContentRect.isEmpty { return pkVisibleContentRect }
+            if pkCanvasBoundsSize != .zero { return CGRect(origin: .zero, size: pkCanvasBoundsSize) }
+            return CGRect(origin: .zero, size: CGSize(width: 1, height: 1))
+        }()
+        
+        // points -> pixels scale based on visible rect
+        let scaleX = pixelSize.width / max(rect.width, 1)
+        let scaleY = pixelSize.height / max(rect.height, 1)
+        let drawScale = min(scaleX, scaleY)
+        
+        let drawingImage = drawing.image(from: rect, scale: drawScale)
+        
         let exportView = CompositeExportView(
             pixelSize: pixelSize,
+            aspect: aspect,
             backgroundUIImage: backgroundUIImage,
-            drawing: drawing,
+            backgroundCropCenter: backgroundCropCenter,
+            drawingImage: drawingImage,
             textItems: textItems,
             stickerItems: stickerItems
         )
         
         let renderer = ImageRenderer(content: exportView)
-        renderer.scale = 1.0
         renderer.proposedSize = .init(pixelSize)
+        renderer.scale = 1.0
         
         return renderer.uiImage ?? UIImage()
     }
@@ -276,9 +411,7 @@ public struct PencilKitCanvasEditor: View {
                 onSelect: {
                     selection = .text(item.id)
                     editingTextID = nil
-                },
-                onBegin: {},
-                onEnd: {}
+                }
             )
         )
         .onTapGesture { selection = .text(item.id) }
@@ -287,7 +420,6 @@ public struct PencilKitCanvasEditor: View {
             beginTextEdit(item)
         }
     }
-
     
     private func stickerView(_ item: CanvasStickerItem, in canvasSize: CGSize) -> some View {
         let isSelected = selection == .sticker(item.id)
@@ -316,78 +448,10 @@ public struct PencilKitCanvasEditor: View {
                     onSelect: {
                         selection = .sticker(item.id)
                         editingTextID = nil
-                    },
-                    onBegin: {},
-                    onEnd: {}
+                    }
                 )
             )
             .onTapGesture { selection = .sticker(item.id) }
-    }
-
-    
-    private enum OverlayKind { case text, sticker }
-    
-    /// Drag now follows the finger by using the gesture location (absolute), not accumulating translation.
-    private func overlayGestureAbsolute(
-        id: UUID,
-        kind: OverlayKind,
-        canvasSize: CGSize,
-        onUpdate: @escaping (_ pos: CGPoint, _ rot: Angle, _ scale: CGFloat) -> Void
-    ) -> some Gesture {
-        let drag = DragGesture(minimumDistance: 0, coordinateSpace: .local)
-            .onChanged { value in
-                let newPos = normalize(value.location, in: canvasSize)
-                switch kind {
-                case .text:
-                    if let item = textItems.first(where: { $0.id == id }) {
-                        onUpdate(newPos, item.rotation, item.scale)
-                    }
-                    selection = .text(id)
-                case .sticker:
-                    if let item = stickerItems.first(where: { $0.id == id }) {
-                        onUpdate(newPos, item.rotation, item.scale)
-                    }
-                    selection = .sticker(id)
-                }
-                editingTextID = nil
-            }
-        
-        let rot = RotationGesture()
-            .onChanged { angle in
-                switch kind {
-                case .text:
-                    if let item = textItems.first(where: { $0.id == id }) {
-                        onUpdate(item.position, item.rotation + angle, item.scale)
-                    }
-                    selection = .text(id)
-                case .sticker:
-                    if let item = stickerItems.first(where: { $0.id == id }) {
-                        onUpdate(item.position, item.rotation + angle, item.scale)
-                    }
-                    selection = .sticker(id)
-                }
-                editingTextID = nil
-            }
-        
-        let mag = MagnificationGesture()
-            .onChanged { m in
-                let clamped = m.clamped(to: 0.2...4.0)
-                switch kind {
-                case .text:
-                    if let item = textItems.first(where: { $0.id == id }) {
-                        onUpdate(item.position, item.rotation, (item.scale * clamped).clamped(to: 0.2...4.0))
-                    }
-                    selection = .text(id)
-                case .sticker:
-                    if let item = stickerItems.first(where: { $0.id == id }) {
-                        onUpdate(item.position, item.rotation, (item.scale * clamped).clamped(to: 0.2...4.0))
-                    }
-                    selection = .sticker(id)
-                }
-                editingTextID = nil
-            }
-        
-        return drag.simultaneously(with: rot).simultaneously(with: mag)
     }
     
     // MARK: - Actions
@@ -433,24 +497,17 @@ public struct PencilKitCanvasEditor: View {
         guard let idx = textItems.firstIndex(where: { $0.id == itemID }) else { return }
         textItems[idx].position = clampNormalized(pos)
         textItems[idx].rotation = rot
-        textItems[idx].scale = scale
+        textItems[idx].scale = scale.clamped(to: 0.2...4.0)
     }
     
     private func updateSticker(itemID: UUID, pos: CGPoint, rot: Angle, scale: CGFloat) {
         guard let idx = stickerItems.firstIndex(where: { $0.id == itemID }) else { return }
         stickerItems[idx].position = clampNormalized(pos)
         stickerItems[idx].rotation = rot
-        stickerItems[idx].scale = scale
+        stickerItems[idx].scale = scale.clamped(to: 0.2...4.0)
     }
     
     // MARK: - Geometry helpers
-    
-    private func normalize(_ point: CGPoint, in canvasSize: CGSize) -> CGPoint {
-        CGPoint(
-            x: (point.x / max(canvasSize.width, 1)).clamped(to: 0...1),
-            y: (point.y / max(canvasSize.height, 1)).clamped(to: 0...1)
-        )
-    }
     
     private func denormalize(_ point: CGPoint, in canvasSize: CGSize) -> CGPoint {
         CGPoint(x: point.x * canvasSize.width, y: point.y * canvasSize.height)
@@ -478,90 +535,151 @@ public struct PencilKitCanvasEditor: View {
     }
 }
 
-// MARK: - PencilKit Wrapper (FIXED tool picker)
+// MARK: - PencilKit Wrapper
 
 struct PencilKitViewWithToolPicker: UIViewRepresentable {
     @Binding var drawing: PKDrawing
+    @Binding var visibleContentRect: CGRect
+    @Binding var canvasBoundsSize: CGSize
+    let isInteractive: Bool
+    
+    @Binding var toolPickerShows: Bool
+    
+    private let toolPicker = PKToolPicker()
+    @State var canvas: PKCanvasView = PKCanvasView()
+
     
     func makeUIView(context: Context) -> PKCanvasView {
-        let canvas = PKCanvasView()
+        self.canvas = PKCanvasView()
         canvas.drawingPolicy = .anyInput
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
         canvas.delegate = context.coordinator
+        
         canvas.alwaysBounceVertical = false
         canvas.alwaysBounceHorizontal = false
+        canvas.bounces = false
+        canvas.contentInsetAdjustmentBehavior = .never
+        canvas.contentInset = .zero
+        canvas.minimumZoomScale = 1
+        canvas.maximumZoomScale = 1
+        canvas.zoomScale = 1
         
         canvas.tool = PKInkingTool(.pen, color: .black, width: 8)
-        
-        // Attach once the view has a window/scene. This reliably shows the system tool picker.
+        toolPicker.setVisible(toolPickerShows, forFirstResponder: canvas)
+        toolPicker.addObserver(canvas)
+        canvas.becomeFirstResponder()
+
         DispatchQueue.main.async { [weak canvas] in
             guard let canvas else { return }
-            canvas.becomeFirstResponder()
-            context.coordinator.attachToolPicker(to: canvas)
+            
+            
+            
+            context.coordinator.publish(from: canvas)
         }
         
         return canvas
     }
     
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
+        uiView.isUserInteractionEnabled = isInteractive
+        
         if uiView.drawing != drawing {
             uiView.drawing = drawing
         }
         
-        // If SwiftUI re-parents / window becomes available later, ensure picker is attached.
-        context.coordinator.attachToolPicker(to: uiView)
+        // Keep “top-left visible” stable for scroll view semantics
+        let inset = uiView.adjustedContentInset
+        let desired = CGPoint(x: -inset.left, y: -inset.top)
+        if uiView.contentOffset != desired {
+            uiView.contentOffset = desired
+        }
+        
+        toolPicker.addObserver(context.coordinator)
+        DispatchQueue.main.async {
+            toolPicker.setVisible(true, forFirstResponder: uiView)
+        }
+        uiView.becomeFirstResponder()
+        
+        DispatchQueue.main.async {
+            toolPicker.setVisible(toolPickerShows, forFirstResponder: uiView)
+            context.coordinator.publish(from: uiView)
+        }
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(drawing: $drawing)
+        let coordinator = Coordinator(self, drawing: $drawing, visibleContentRect: $visibleContentRect, canvasBoundsSize: $canvasBoundsSize)
+        toolPicker.addObserver(coordinator)
+        canvas.delegate = coordinator
+        return coordinator
     }
     
     final class Coordinator: NSObject, PKCanvasViewDelegate, PKToolPickerObserver {
         @Binding var drawing: PKDrawing
-        private weak var attachedCanvas: PKCanvasView?
-        private var toolPicker: PKToolPicker?
+        @Binding var visibleContentRect: CGRect
+        @Binding var canvasBoundsSize: CGSize
+        var parent: PencilKitViewWithToolPicker
         
-        init(drawing: Binding<PKDrawing>) {
+        private var didAttach = false
+        
+        init(
+            _ parent: PencilKitViewWithToolPicker,
+            drawing: Binding<PKDrawing>,
+            visibleContentRect: Binding<CGRect>,
+            canvasBoundsSize: Binding<CGSize>
+        ) {
+            self.parent = parent
             _drawing = drawing
+            _visibleContentRect = visibleContentRect
+            _canvasBoundsSize = canvasBoundsSize
+        }
+        
+        func toolPickerSelectedToolItemDidChange(_ toolPicker: PKToolPicker) {
+            parent.canvas.tool = toolPicker.selectedTool
         }
         
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             drawing = canvasView.drawing
+            publish(from: canvasView)
         }
         
-        func attachToolPicker(to canvas: PKCanvasView) {
-            guard canvas.window != nil else { return }
-//            guard let windowScene = canvas.window?.window else { return }
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            guard let canvas = scrollView as? PKCanvasView else { return }
+            publish(from: canvas)
+        }
+        
+        func publish(from canvas: PKCanvasView) {
+            canvasBoundsSize = canvas.bounds.size
             
-            let picker = PKToolPicker()
-            toolPicker = picker
-            attachedCanvas = canvas
-            
-            picker.setVisible(true, forFirstResponder: canvas)
-            picker.addObserver(canvas)
-            picker.addObserver(self)
-            
-            canvas.becomeFirstResponder()
+            let inset = canvas.adjustedContentInset
+            let rect = CGRect(
+                x: canvas.contentOffset.x + inset.left,
+                y: canvas.contentOffset.y + inset.top,
+                width: canvas.bounds.width,
+                height: canvas.bounds.height
+            )
+            visibleContentRect = rect
         }
     }
 }
 
-// MARK: - Export Composite View
+// MARK: - Export Composite View (SwiftUI-only for ImageRenderer)
 
 private struct CompositeExportView: View {
     let pixelSize: CGSize
+    let aspect: CGFloat
     let backgroundUIImage: UIImage?
-    let drawing: PKDrawing
+    let backgroundCropCenter: CGPoint
+    let drawingImage: UIImage
     let textItems: [CanvasTextItem]
     let stickerItems: [CanvasStickerItem]
     
     var body: some View {
         ZStack {
             if let bg = backgroundUIImage {
-                Image(uiImage: bg.croppedToAspect(pixelSize.width / pixelSize.height))
+                Image(uiImage: bg.croppedToAspect(aspect, center: backgroundCropCenter))
                     .resizable()
-                    .aspectRatio(pixelSize.width / pixelSize.height, contentMode: .fill)
+                    .aspectRatio(aspect, contentMode: .fill)
                     .frame(width: pixelSize.width, height: pixelSize.height)
                     .clipped()
             } else {
@@ -570,7 +688,7 @@ private struct CompositeExportView: View {
                     .frame(width: pixelSize.width, height: pixelSize.height)
             }
             
-            Image(uiImage: drawing.image(from: CGRect(origin: .zero, size: pixelSize), scale: 1.0))
+            Image(uiImage: drawingImage)
                 .resizable()
                 .frame(width: pixelSize.width, height: pixelSize.height)
                 .clipped()
@@ -635,55 +753,7 @@ private struct StickerPicker: View {
     }
 }
 
-// MARK: - Helpers
-
-private extension CGRect {
-    func centered(in container: CGRect) -> CGRect {
-        CGRect(
-            x: container.midX - width / 2,
-            y: container.midY - height / 2,
-            width: width,
-            height: height
-        )
-    }
-}
-
-private extension Comparable {
-    func clamped(to range: ClosedRange<Self>) -> Self {
-        min(max(self, range.lowerBound), range.upperBound)
-    }
-}
-
-private extension UIImage {
-    func croppedToAspect(_ aspect: CGFloat) -> UIImage {
-        guard size.width > 0, size.height > 0 else { return self }
-        
-        let imgAspect = size.width / size.height
-        let cropRect: CGRect
-        
-        if imgAspect > aspect {
-            let newWidth = size.height * aspect
-            let x = (size.width - newWidth) / 2
-            cropRect = CGRect(x: x, y: 0, width: newWidth, height: size.height)
-        } else {
-            let newHeight = size.width / aspect
-            let y = (size.height - newHeight) / 2
-            cropRect = CGRect(x: 0, y: y, width: size.width, height: newHeight)
-        }
-        
-        guard
-            let cg = cgImage,
-            let cropped = cg.cropping(to: cropRect.applying(
-                CGAffineTransform(
-                    scaleX: CGFloat(cg.width) / size.width,
-                    y: CGFloat(cg.height) / size.height
-                )
-            ))
-        else { return self }
-        
-        return UIImage(cgImage: cropped, scale: scale, orientation: imageOrientation)
-    }
-}
+// MARK: - Transform Gestures (UIKit recognizers for stable simultaneous pan/pinch/rotate)
 
 private struct TransformGestureView: UIViewRepresentable {
     struct State: Equatable {
@@ -695,8 +765,6 @@ private struct TransformGestureView: UIViewRepresentable {
     let canvasSize: CGSize
     @Binding var state: State
     let onSelect: () -> Void
-    let onBegin: () -> Void
-    let onEnd: () -> Void
     
     func makeUIView(context: Context) -> UIView {
         let view = PassthroughView()
@@ -722,8 +790,6 @@ private struct TransformGestureView: UIViewRepresentable {
         context.coordinator.canvasSize = canvasSize
         context.coordinator.state = $state
         context.coordinator.onSelect = onSelect
-        context.coordinator.onBegin = onBegin
-        context.coordinator.onEnd = onEnd
     }
     
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -732,12 +798,8 @@ private struct TransformGestureView: UIViewRepresentable {
         var canvasSize: CGSize = .zero
         var state: Binding<State>?
         var onSelect: (() -> Void)?
-        var onBegin: (() -> Void)?
-        var onEnd: (() -> Void)?
         
         private var base: State?
-        private var accumulatedRotation: CGFloat = 0
-        private var accumulatedScale: CGFloat = 1
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             true
@@ -746,17 +808,12 @@ private struct TransformGestureView: UIViewRepresentable {
         private func beginIfNeeded(_ recognizer: UIGestureRecognizer) {
             guard recognizer.state == .began else { return }
             onSelect?()
-            onBegin?()
-            guard let current = state?.wrappedValue else { return }
-            base = current
-            accumulatedRotation = 0
-            accumulatedScale = 1
+            base = state?.wrappedValue
         }
         
         private func endIfNeeded(_ recognizer: UIGestureRecognizer) {
             guard recognizer.state == .ended || recognizer.state == .cancelled || recognizer.state == .failed else { return }
             base = nil
-            onEnd?()
         }
         
         @objc func handlePan(_ recognizer: UIPanGestureRecognizer) {
@@ -778,12 +835,8 @@ private struct TransformGestureView: UIViewRepresentable {
             defer { endIfNeeded(recognizer) }
             
             guard let base, let binding = state else { return }
-            // UIPinch gives cumulative scale since began; apply relative to base.
-            let raw = base.scale * recognizer.scale
-            let nextScale = min(max(raw, 0.2), 4.0)
-            
             var next = binding.wrappedValue
-            next.scale = nextScale
+            next.scale = (base.scale * recognizer.scale).clamped(to: 0.2...4.0)
             binding.wrappedValue = next
         }
         
@@ -792,7 +845,6 @@ private struct TransformGestureView: UIViewRepresentable {
             defer { endIfNeeded(recognizer) }
             
             guard let base, let binding = state else { return }
-            // recognizer.rotation is radians since began.
             var next = binding.wrappedValue
             next.rotation = base.rotation + Angle(radians: Double(recognizer.rotation))
             binding.wrappedValue = next
@@ -806,22 +858,119 @@ private struct TransformGestureView: UIViewRepresentable {
         }
     }
     
-    /// Lets touches pass through except the gesture recognizers.
     private final class PassthroughView: UIView {
-        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-            true
+        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool { true }
+    }
+}
+
+// MARK: - Helpers
+
+private extension CGRect {
+    func centered(in container: CGRect) -> CGRect {
+        CGRect(
+            x: container.midX - width / 2,
+            y: container.midY - height / 2,
+            width: width,
+            height: height
+        )
+    }
+}
+
+private extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
         }
     }
 }
 
+private extension UIImage {
+    func croppedToAspect(_ aspect: CGFloat, center: CGPoint) -> UIImage {
+        guard size.width > 0, size.height > 0, let cg = cgImage else { return self }
+        
+        let pixelW = CGFloat(cg.width)
+        let pixelH = CGFloat(cg.height)
+        let imgAspect = pixelW / pixelH
+        
+        let cropW: CGFloat
+        let cropH: CGFloat
+        
+        if imgAspect > aspect {
+            cropH = pixelH
+            cropW = pixelH * aspect
+        } else {
+            cropW = pixelW
+            cropH = pixelW / aspect
+        }
+        
+        let halfW = cropW / 2
+        let halfH = cropH / 2
+        
+        let minCenterX = halfW
+        let maxCenterX = pixelW - halfW
+        let minCenterY = halfH
+        let maxCenterY = pixelH - halfH
+        
+        let clampedCenterX = (center.x * pixelW).clamped(to: minCenterX...maxCenterX)
+        let clampedCenterY = (center.y * pixelH).clamped(to: minCenterY...maxCenterY)
+        
+        let originX = clampedCenterX - halfW
+        let originY = clampedCenterY - halfH
+        
+        let rect = CGRect(x: originX, y: originY, width: cropW, height: cropH).integral
+        
+        guard let cropped = cg.cropping(to: rect) else { return self }
+        return UIImage(cgImage: cropped, scale: scale, orientation: imageOrientation)
+    }
+    
+    func cropCenterLimits(forAspect aspect: CGFloat) -> (xRange: ClosedRange<CGFloat>, yRange: ClosedRange<CGFloat>) {
+        guard let cg = cgImage else { return (0...1, 0...1) }
+        
+        let pixelW = CGFloat(cg.width)
+        let pixelH = CGFloat(cg.height)
+        let imgAspect = pixelW / pixelH
+        
+        let cropW: CGFloat
+        let cropH: CGFloat
+        if imgAspect > aspect {
+            cropH = pixelH
+            cropW = pixelH * aspect
+        } else {
+            cropW = pixelW
+            cropH = pixelW / aspect
+        }
+        
+        let halfW = cropW / 2
+        let halfH = cropH / 2
+        
+        let minCenterX = halfW / pixelW
+        let maxCenterX = 1 - (halfW / pixelW)
+        let minCenterY = halfH / pixelH
+        let maxCenterY = 1 - (halfH / pixelH)
+        
+        return (minCenterX...maxCenterX, minCenterY...maxCenterY)
+    }
+}
 
 // MARK: - Preview
 
 #Preview {
-    PencilKitCanvasEditor(
-        pixelSize: CGSize(width: 400, height: 300),
-        stickerAssets: ["sticker_star", "sticker_heart", "sticker_bolt"]
-    ) { image in
-        print("Exported image: \(image.size)")
+    NavigationStack {
+        PencilKitCanvasEditor(
+            pixelSize: CGSize(width: 296, height: 128),
+            stickerAssets: ["sticker_star"]
+        ) { image in
+            print("Exported:", image.cgImage?.width as Any, image.cgImage?.height as Any)
+        }
+        .navigationTitle("Editor")
     }
 }
