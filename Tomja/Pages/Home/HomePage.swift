@@ -15,6 +15,7 @@ public struct HomePage: View {
     @Environment(\.networkClient) private var api
     
     @State private var currentHome: HomeDTO? = nil
+    @State private var loadTask: Task<Void, Never>?
     
     public var body: some View {
         ZStack {
@@ -30,13 +31,15 @@ public struct HomePage: View {
                 ProgressView()
             }
         }
-        .task(id: "get-home") {
-            do {
-                self.currentHome = try await api.get(Homes.my)
-            } catch {
-                print(error)
-            }
+        .task {
+            await load()
         }
+        .refreshable {
+            await load()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deviceUpdated), perform: { _ in
+            Task { await load() }
+        })
         .fontDesign(.rounded)
     }
 }
@@ -51,6 +54,18 @@ extension HomePage {
             }
         }
         .contentMargins(.horizontal, 16, for: .scrollContent)
+    }
+    
+    private func load() async {
+        loadTask?.cancel()
+        
+        loadTask = Task {
+            do {
+                self.currentHome = try await api.get(Homes.my)
+            } catch {
+                print(error)
+            }
+        }
     }
 }
 

@@ -12,6 +12,7 @@ public enum Users: Endpoint {
     case getForHome(homeId: String, code: String)
     case authAs(userId: String, code: String)
     case create(userName: String, homeId: String)
+    case registerApns(token: String, name: String)
     
     public func path() -> String {
         switch self {
@@ -21,6 +22,8 @@ public enum Users: Endpoint {
             return "users/auth/\(userId)/home/\(code)"
         case .create:
             return "users"
+        case .registerApns:
+            return "users/me/apns"
         }
     }
     
@@ -32,6 +35,8 @@ public enum Users: Endpoint {
         switch self {
         case .create(let name, let home):
             return CreateUserRequest(name: name, homeId: home)
+        case .registerApns(let token, let name):
+            return RegisterAPNSRequest(token: token, device: name)
         default:
             return nil
         }
@@ -49,6 +54,8 @@ public enum Users: Endpoint {
             return resp
         case .create:
             return UserDTOMockBuilder().build()
+        case .registerApns:
+            return true
         }
     }
 }

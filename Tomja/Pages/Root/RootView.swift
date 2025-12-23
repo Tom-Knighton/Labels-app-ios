@@ -8,14 +8,17 @@
 import SwiftUI
 import SwiftData
 import AppRouter
+import UserNotifications
 
 public struct RootView: View {
     
+    @Environment(\.networkClient) private var api
     @Environment(\.home) private var home
     @Environment(\.user) private var user
+    @Environment(PushRegistrationManager.self) private var pushManager
+    @Environment(\.scenePhase) private var scenePhase
     @State private var router = AppRouter(initialTab: .home)
-    @State var selection: AppTab = AppTab.home
-
+    @State var selection: AppTab = AppTab.home    
         
     public var body: some View {
         TabView(selection: $selection) {
@@ -36,5 +39,41 @@ public struct RootView: View {
             }
         }
         .environment(router)
+        .onAppear {
+            self.pushManager.refreshAndRegisterIfNeeded(api: api)
+            self.pushManager.requestPermission(api: api)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                pushManager.refreshAndRegisterIfNeeded(api: api)
+            }
+        }
     }
 }
+
+@MainActor
+func requestNotificationPermission() async -> Bool {
+    let center = UNUserNotificationCenter.current()
+    
+    let settings = await center.notificationSettings()
+    switch settings.authorizationStatus {
+    case .authorized, .provisional, .ephemeral:
+        return true
+        
+    case .notDetermined:
+        do {
+            return try await center.requestAuthorization(
+                options: [.alert, .badge, .sound]
+            )
+        } catch {
+            return false
+        }
+        
+    case .denied:
+        return false
+        
+    @unknown default:
+        return false
+    }
+}
+

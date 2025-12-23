@@ -16,7 +16,7 @@ public struct ProfilePage: View {
     @State private var isLoading: Bool = false
     @State private var devices: [DeviceDTO] = []
     @State private var showAdd: Bool = false
-    
+    @State private var loadTask: Task<Void, Never>?
     @State private var messageError: Bool = false
         
     public var body: some View {
@@ -105,15 +105,14 @@ public struct ProfilePage: View {
         }
         .fontDesign(.rounded)
         .task {
-            self.isLoading = true
-            defer { self.isLoading = false }
-            do {
-                let devices: [DeviceDTO] = try await api.get(Devices.my)
-                self.devices = devices
-            } catch {
-                print(error)
-            }
+            await load()
         }
+        .refreshable(action: {
+            await load()
+        })
+        .onReceive(NotificationCenter.default.publisher(for: .deviceUpdated), perform: { _ in
+            Task { await load() }
+        })
         .sheet(isPresented: $showAdd) {
             RegisterDeviceSheet()
                 .interactiveDismissDisabled()
@@ -154,6 +153,21 @@ extension ProfilePage {
         } catch {
             print(error)
             self.messageError = true
+        }
+    }
+    
+    func load() async {
+        self.loadTask?.cancel()
+        
+        self.loadTask = Task {
+            self.isLoading = true
+            defer { self.isLoading = false }
+            do {
+                let devices: [DeviceDTO] = try await api.get(Devices.my)
+                self.devices = devices
+            } catch {
+                print(error)
+            }
         }
     }
 }
