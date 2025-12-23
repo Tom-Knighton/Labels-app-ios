@@ -13,8 +13,8 @@ public struct DeviceDTO: Codable, Sendable, Equatable, Identifiable, Hashable {
     public let homeId: String
     public let ownerUserId: String
     public let name: String
-    public let ble: DeviceBLE
-    public let shadow: DeviceShadow
+    public let ble: DeviceBLE?
+    public let shadow: DeviceShadow?
     public let createdAt: Date
     public let updatedAt: Date
     
@@ -46,7 +46,7 @@ public struct DeviceShadow: Codable, Equatable, Sendable, Hashable {
     public let currentImagePreviewBase64: String?
     public let lastSuccessfulActionAt: Date?
     public let lastSeenAt: Date?
-    public let lastError: Date?
+    public let lastError: String?
     public let currentImagePreviewHeight: Int?
     public let currentImagePreviewType: String?
     public let currentImagePreviewWidth: Int?
@@ -54,7 +54,7 @@ public struct DeviceShadow: Codable, Equatable, Sendable, Hashable {
     public let flashedFor: Int?
     public let lastFlashed: Date?
     
-    public init(currentImagePreviewBase64: String?, lastSuccessfulActionAt: Date?, lastSeenAt: Date?, lastError: Date?, currentImagePreviewHeight: Int?, currentImagePreviewType: String?, currentImagePreviewWidth: Int?, lastErrors: [String]?, flashedFor: Int?, lastFlashed: Date?) {
+    public init(currentImagePreviewBase64: String?, lastSuccessfulActionAt: Date?, lastSeenAt: Date?, lastError: String?, currentImagePreviewHeight: Int?, currentImagePreviewType: String?, currentImagePreviewWidth: Int?, lastErrors: [String]?, flashedFor: Int?, lastFlashed: Date?) {
         self.currentImagePreviewBase64 = currentImagePreviewBase64
         self.lastSuccessfulActionAt = lastSuccessfulActionAt
         self.lastSeenAt = lastSeenAt

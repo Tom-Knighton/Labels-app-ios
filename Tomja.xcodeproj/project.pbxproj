@@ -12,6 +12,7 @@
 		E21F4A4B2EF98A2D00E32B85 /* AppRouter in Frameworks */ = {isa = PBXBuildFile; productRef = E21F4A4A2EF98A2D00E32B85 /* AppRouter */; };
 		E21F4A632EF9A32B00E32B85 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = E21F4A622EF9A32B00E32B85 /* CodeScanner */; };
 		E21F4A812EFAC8B400E32B85 /* notificationservice.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E21F4A7A2EFAC8B400E32B85 /* notificationservice.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E21F4A8B2EFAD64400E32B85 /* CustomAlert in Frameworks */ = {isa = PBXBuildFile; productRef = E21F4A8A2EFAD64400E32B85 /* CustomAlert */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -109,6 +110,7 @@
 			files = (
 				E21F4A3E2EF8A11300E32B85 /* API in Frameworks */,
 				E21F4A4B2EF98A2D00E32B85 /* AppRouter in Frameworks */,
+				E21F4A8B2EFAD64400E32B85 /* CustomAlert in Frameworks */,
 				E21F4A632EF9A32B00E32B85 /* CodeScanner in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -192,6 +194,7 @@
 				E21F4A3D2EF8A11300E32B85 /* API */,
 				E21F4A4A2EF98A2D00E32B85 /* AppRouter */,
 				E21F4A622EF9A32B00E32B85 /* CodeScanner */,
+				E21F4A8A2EFAD64400E32B85 /* CustomAlert */,
 			);
 			productName = Tomja;
 			productReference = E2BC10D22EF85E6400C86006 /* Tomja.app */;
@@ -227,6 +230,7 @@
 			packageReferences = (
 				E21F4A492EF98A2D00E32B85 /* XCRemoteSwiftPackageReference "AppRouter" */,
 				E21F4A612EF9A32B00E32B85 /* XCRemoteSwiftPackageReference "CodeScanner" */,
+				E21F4A892EFAD63800E32B85 /* XCRemoteSwiftPackageReference "CustomAlert" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E2BC10D32EF85E6400C86006 /* Products */;
@@ -581,6 +585,14 @@
 				minimumVersion = 2.5.2;
 			};
 		};
+		E21F4A892EFAD63800E32B85 /* XCRemoteSwiftPackageReference "CustomAlert" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/divadretlaw/CustomAlert.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.0.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -597,6 +609,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E21F4A612EF9A32B00E32B85 /* XCRemoteSwiftPackageReference "CodeScanner" */;
 			productName = CodeScanner;
+		};
+		E21F4A8A2EFAD64400E32B85 /* CustomAlert */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E21F4A892EFAD63800E32B85 /* XCRemoteSwiftPackageReference "CustomAlert" */;
+			productName = CustomAlert;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

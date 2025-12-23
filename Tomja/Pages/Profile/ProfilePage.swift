@@ -9,6 +9,7 @@ import SwiftUI
 import API
 import CodeScanner
 internal import AVFoundation
+import CustomAlert
 
 public struct ProfilePage: View {
     
@@ -17,8 +18,20 @@ public struct ProfilePage: View {
     @State private var devices: [DeviceDTO] = []
     @State private var showAdd: Bool = false
     @State private var loadTask: Task<Void, Never>?
-    @State private var messageError: Bool = false
+    @State private var message: String? = nil
+    @State private var sending: Bool = false
         
+    private var alertIsPresented: Binding<Bool> {
+        Binding(
+            get: { message != nil },
+            set: { isPresented in
+                if !isPresented {
+                    message = nil
+                }
+            }
+        )
+    }
+    
     public var body: some View {
         ZStack {
             Color.color1.ignoresSafeArea()
@@ -49,23 +62,7 @@ public struct ProfilePage: View {
                         }
                     }
                     
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color.accentColor, style: .init(lineWidth: 1))
-                        
-                        ESLViewport(sizePx: .init(width: device.ble.width, height: device.ble.height)) {
-                            if let preview = device.shadow.currentImagePreviewBase64 {
-                                Image(base64JPEG: preview)
-                                    .resizable()
-                                    .aspectRatio(CGFloat(device.ble.width) / CGFloat(device.ble.height), contentMode: .fill)
-                                   
-                            } else {
-                                RoundedRectangle(cornerRadius: 5)
-                            }
-                        }
-                        .shadow(radius: 3)
-                    }
-                    .padding(6)
+                    preview(for: device)
                     
                     HStack {
                         Button(action: { Task { await clearScreen(for: device) }}) {
@@ -129,10 +126,40 @@ public struct ProfilePage: View {
                     }
                 }
         }
+        .alert("Info", isPresented: alertIsPresented) {
+            Button(action: { self.message = nil }) { Text("Ok") }
+        } message: {
+            Text(self.message ?? "")
+        }
+        .customAlert("Sending...", isPresented: $sending) {
+            Text("Sending the command, this may take a few seconds...")
+            ProgressView()
+        } actions: {}
     }
 }
 
 extension ProfilePage {
+    
+    @ViewBuilder
+    private func preview(for device: DeviceDTO) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 5)
+                .stroke(Color.accentColor, style: .init(lineWidth: 1))
+            
+            ESLViewport(sizePx: .init(width: (device.ble?.width ?? 400), height: (device.ble?.height ?? 300))) {
+                if let preview = device.shadow?.currentImagePreviewBase64 {
+                    Image(base64JPEG: preview)
+                        .resizable()
+                        .aspectRatio(CGFloat(device.ble?.width ?? 400) / CGFloat(device.ble?.height ?? 300), contentMode: .fill)
+                    
+                } else {
+                    RoundedRectangle(cornerRadius: 5)
+                }
+            }
+            .shadow(radius: 3)
+        }
+        .padding(6)
+    }
     
     func deleteDevice(device: DeviceDTO) async {
         do {
@@ -145,14 +172,20 @@ extension ProfilePage {
     }
     
     func clearScreen(for device: DeviceDTO) async {
+        self.sending = true
+        defer { self.sending = false }
+        
         do {
             let status: MessageResponse = try await api.post(Messages.clear(deviceId: device.id))
             if !status.accepted {
-                self.messageError = true
+                self.message = "Something went wrong sending the clear command - please try again later."
+                return
             }
+            
+            self.message = "The clear command has been sent - it may take up to a minute to update."
         } catch {
             print(error)
-            self.messageError = true
+            self.message = "Something went wrong sending the clear command - please try again later."
         }
     }
     

@@ -21,7 +21,7 @@ public class DeviceDTOMockBuilder {
     var currentAsset: String? = nil
     var lastSuccessful: Date? = nil
     var lastSeen: Date? = nil
-    var lastError: Date? = nil
+    var lastError: String? = nil
     var createdAt: Date = .now
     var updatedAt: Date = .now
     var width: Int = 400
@@ -71,7 +71,7 @@ public class DeviceDTOMockBuilder {
         return self
     }
     
-    public func withError(_ lastError: Date?) -> DeviceDTOMockBuilder {
+    public func withError(_ lastError: String?) -> DeviceDTOMockBuilder {
         self.lastError = lastError
         return self
     }

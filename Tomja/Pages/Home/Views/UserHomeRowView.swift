@@ -29,9 +29,9 @@ public struct UserHomeRowView: View {
                         RoundedRectangle(cornerRadius: 5)
                             .stroke(Color.accentColor, style: .init(lineWidth: 1))
                         
-                        ESLViewport(sizePx: .init(width: device.ble.width, height: device.ble.height)) {
+                        ESLViewport(sizePx: .init(width: (device.ble?.width ?? 400), height: (device.ble?.height ?? 300))) {
                             
-                            if let preview = device.shadow.currentImagePreviewBase64 {
+                            if let preview = device.shadow?.currentImagePreviewBase64 {
                                 Image(base64JPEG: preview)
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
