@@ -20,6 +20,7 @@ public struct ProfilePage: View {
     @State private var loadTask: Task<Void, Never>?
     @State private var message: String? = nil
     @State private var sending: Bool = false
+    @State private var showFlashSheetForDevice: String? = nil
         
     private var alertIsPresented: Binding<Bool> {
         Binding(
@@ -70,7 +71,7 @@ public struct ProfilePage: View {
                         }
                         .buttonStyle(.bordered)
                         
-                        Button(action: {}) {
+                        Button(action: { self.showFlashSheetForDevice = device.id }) {
                             Text("Flash")
                         }
                         .buttonStyle(.bordered)
@@ -126,6 +127,15 @@ public struct ProfilePage: View {
                     }
                 }
         }
+        .sheet(item: $showFlashSheetForDevice, content: { deviceId in
+            ColorPickerSheet { selected in
+                if let selected {
+                    Task {
+                        await flashDevice(for: deviceId, colour: selected)
+                    }
+                }
+            }
+        })
         .alert("Info", isPresented: alertIsPresented) {
             Button(action: { self.message = nil }) { Text("Ok") }
         } message: {
@@ -186,6 +196,24 @@ extension ProfilePage {
         } catch {
             print(error)
             self.message = "Something went wrong sending the clear command - please try again later."
+        }
+    }
+    
+    func flashDevice(for deviceId: String, colour: Color) async {
+        self.sending = true
+        defer { self.sending = false }
+        
+        do {
+            let status: MessageResponse = try await api.post(Messages.flash(deviceId: deviceId, hex: colour.hexString() ?? "#FFFFFF"))
+            if !status.accepted {
+                self.message = "Something went wrong sending the flash command - please try again later."
+                return
+            }
+            
+            self.message = "The clear command has been sent - it may take up to a minute to flash."
+        } catch {
+            print(error)
+            self.message = "Something went wrong sending the flash command - please try again later."
         }
     }
     
