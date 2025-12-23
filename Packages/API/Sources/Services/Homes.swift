@@ -10,12 +10,15 @@ import Foundation
 public enum Homes: Endpoint {
     
     case getForCode(code: String)
+    case create(name: String)
     case my
     
     public func path() -> String {
         switch self {
         case .getForCode(let code):
             return "homes/\(code)"
+        case .create:
+            return "homes"
         case .my:
             return "homes/my"
         }
@@ -27,13 +30,22 @@ public enum Homes: Endpoint {
     }
     
     public var body: (any Encodable)? {
-        return nil
+        switch self {
+        case .create(let name):
+            return CreateHomeRequest(name: name)
+        default:
+            return nil
+        }
     }
     
     public func mockResponseOk() -> any Decodable {
         switch self {
         case .getForCode:
             return HomeDTOMockBuilder()
+                .build()
+        case .create(let name):
+            return HomeDTOMockBuilder()
+                .withName(name)
                 .build()
         case .my:
             return HomeDTOMockBuilder()

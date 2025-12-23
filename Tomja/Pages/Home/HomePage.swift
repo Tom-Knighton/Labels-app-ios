@@ -49,6 +49,9 @@ extension HomePage {
     @ViewBuilder
     func usersList(for home: HomeDTO) -> some View {
         ScrollView {
+            Text("Join Code: " + (home.joinCode ?? ""))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .font(.caption)
             ForEach(home.users) { user in
                 UserHomeRowView(user: user)
             }

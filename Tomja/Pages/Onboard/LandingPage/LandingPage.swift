@@ -12,9 +12,8 @@ struct LandingPage: View {
     
     @Environment(\.modelContext) private var context
     @State private var showJoinPage: Bool = false
+    @State private var showCreatePage: Bool = false
     @Environment(\.colorScheme) private var colorScheme
-    
-   
     
     var body: some View {
         ZStack {
@@ -31,7 +30,7 @@ struct LandingPage: View {
                     .multilineTextAlignment(.center)
                 Spacer()
                 Spacer()
-                Button(action: {}) {
+                Button(action: { self.showCreatePage.toggle() }) {
                     Text("Create a Home")
                         .font(.title3.bold())
                         .padding(6)
@@ -53,6 +52,10 @@ struct LandingPage: View {
         }
         .sheet(isPresented: $showJoinPage) {
             JoinHomePage()
+                .interactiveDismissDisabled()
+        }
+        .sheet(isPresented: $showCreatePage) {
+            CreateHomePage()
                 .interactiveDismissDisabled()
         }
     }
